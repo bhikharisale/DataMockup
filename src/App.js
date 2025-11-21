@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { faker } from '@faker-js/faker';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";   // <-- important
 import './App.css';
+
 
 function App() {
   const [rows, setRows] = useState(100);
@@ -18,132 +21,52 @@ function App() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  // NEW: State for size condition
+  // NEW: Size condition
   const [selectedSizeCondition, setSelectedSizeCondition] = useState('');
-  // NEW: State for DOB condition and range
+
+  // NEW: DOB states (replacing old text range)
   const [selectedDOBFormat, setSelectedDOBFormat] = useState('');
-  const [dobRange, setDobRange] = useState('dd-mm-yyyy, dd-mm-yyyy');
-  const [dobRangeError, setDobRangeError] = useState('');
+  const [dobFromDate, setDobFromDate] = useState(null);
+  const [dobToDate, setDobToDate] = useState(null);
+  const [dobDateError, setDobDateError] = useState('');
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
+  // -------------- START of replacing code area for DO Pikcer - Nov 21 12:50PM -----------------------------------------------------------------------------
+
+
   useEffect(() => {
     setColumnName(selectedType);
-    // NEW: Reset size condition when type changes from Size
-    if (selectedType !== 'Size') {
-      setSelectedSizeCondition('');
-    }
-    // NEW: Reset DOB condition when type changes from DOB
+
+    // Reset everything when type changes
+    if (selectedType !== 'Size') setSelectedSizeCondition('');
     if (selectedType !== 'DOB') {
       setSelectedDOBFormat('');
-      setDobRange('dd-mm-yyyy, dd-mm-yyyy');
-      setDobRangeError('');
+      setDobFromDate(null);
+      setDobToDate(null);
+      setDobDateError('');
     }
   }, [selectedType]);
 
-  // NEW: Validate DOB range
-  const validateDOBRange = (range) => {
-    if (!range.trim() || range === 'dd-mm-yyyy, dd-mm-yyyy') {
-      setDobRangeError('');
-      return true;
+  // Validate DOB dates
+  useEffect(() => {
+    if (!dobFromDate && !dobToDate) {
+      setDobDateError('');
+      return;
     }
-    
-    // Check if the format contains the required separators
-    if (!range.includes('-') || !range.includes(',')) {
-      setDobRangeError('Invalid format. Use: dd-mm-yyyy, dd-mm-yyyy');
-      return false;
+    if (dobFromDate && dobToDate && dobFromDate > dobToDate) {
+      setDobDateError('From date cannot be after To date');
+    } else {
+      setDobDateError('');
     }
-    
-    const parts = range.split(',');
-    if (parts.length !== 2) {
-      setDobRangeError('Invalid format. Use: dd-mm-yyyy, dd-mm-yyyy');
-      return false;
-    }
-    
-    const [startStr, endStr] = parts.map(part => part.trim());
-    
-    // Check if both parts are empty (no restrictions)
-    if (startStr === 'dd-mm-yyyy' && endStr === 'dd-mm-yyyy') {
-      setDobRangeError('');
-      return true;
-    }
-    
-    // Validate date format for start date if provided
-    if (startStr !== 'dd-mm-yyyy') {
-      const dateRegex = /^\d{1,2}-\d{1,2}-\d{4}$/;
-      if (!dateRegex.test(startStr)) {
-        setDobRangeError('Invalid start date format. Use dd-mm-yyyy');
-        return false;
-      }
-      
-      // Parse start date
-      const parseDate = (dateStr) => {
-        const [day, month, year] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      };
-      
-      const startDate = parseDate(startStr);
-      if (isNaN(startDate.getTime())) {
-        setDobRangeError('Invalid start date');
-        return false;
-      }
-    }
-    
-    // Validate date format for end date if provided
-    if (endStr !== 'dd-mm-yyyy') {
-      const dateRegex = /^\d{1,2}-\d{1,2}-\d{4}$/;
-      if (!dateRegex.test(endStr)) {
-        setDobRangeError('Invalid end date format. Use dd-mm-yyyy');
-        return false;
-      }
-      
-      // Parse end date
-      const parseDate = (dateStr) => {
-        const [day, month, year] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      };
-      
-      const endDate = parseDate(endStr);
-      if (isNaN(endDate.getTime())) {
-        setDobRangeError('Invalid end date');
-        return false;
-      }
-    }
-    
-    // Validate that start date is not greater than end date if both are provided
-    if (startStr !== 'dd-mm-yyyy' && endStr !== 'dd-mm-yyyy') {
-      const parseDate = (dateStr) => {
-        const [day, month, year] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      };
-      
-      const startDate = parseDate(startStr);
-      const endDate = parseDate(endStr);
-      
-      if (startDate > endDate) {
-        setDobRangeError('Start date cannot be greater than end date');
-        return false;
-      }
-    }
-    
-    setDobRangeError('');
-    return true;
-  };
+  }, [dobFromDate, dobToDate]);
 
-  // NEW: Simple DOB range change handler
-  const handleDobRangeChange = (e) => {
-    const value = e.target.value;
-    setDobRange(value);
-    validateDOBRange(value);
-  };
+  const isGenerateDisabled = () => dobDateError || isLoading;
 
-  // NEW: Check if generate button should be disabled
-  const isGenerateDisabled = () => {
-    if (selectedType === 'DOB' && selectedDOBFormat && dobRangeError) {
-      return true;
-    }
-    return isLoading;
-  };
+
+
+
+  // -------------- END of replacing code area for DOB Pikcer  -----------------------------------------------------------------------------
 
   // NEW: Move column up - START
   const moveColumnUp = (index) => {
@@ -172,7 +95,7 @@ function App() {
     'Personal': ['Name', 'First Name', 'Last Name', 'Gender', 'SSN', 'Shoe Size', 'DOB', 'Salary', 'Height', 'Weight'],
     'Location': ['House Number', 'Building Number', 'Street Name', 'Postal Code', 'City', 'State', 'Country', 'City Population', 'Country Population', 'Longitude', 'Latitude'],
     'Finance': ['Credit Card Number', 'CVV'],
-    'Measurements': ['Size','Temperature (C)', 'Temperature (F)', 'Inches', 'cms', 'mts', 'KMs', 'Miles', 'Grams', 'Kilograms', 'Cubic Centimeter', 'Litres', 'Milliliters', 'KM/H', 'Miles/H', 'm/s', 'Ampere', 'Voltage', 'Wattage'],
+    'Measurements': ['Size', 'Temperature (C)', 'Temperature (F)', 'Inches', 'cms', 'mts', 'KMs', 'Miles', 'Grams', 'Kilograms', 'Cubic Centimeter', 'Litres', 'Milliliters', 'KM/H', 'Miles/H', 'm/s', 'Ampere', 'Voltage', 'Wattage'],
     'Date': ['Day', 'Month', 'Year'],
     'Generic': ['String', 'Numeric', 'Boolean', 'Price', 'ID', 'Lorem Text', 'Company']
   };
@@ -180,7 +103,7 @@ function App() {
   // NEW: DOB formats
   const dobFormats = [
     'dd-mm-yyyy',
-    'mm-dd-yyyy', 
+    'mm-dd-yyyy',
     'dd-mmm-yyyy',
     'mmm-dd-yyyy'
   ];
@@ -214,67 +137,49 @@ function App() {
     'Generic abbreviated': ['XS', 'S', 'M', 'L', 'XL']
   };
 
-  // NEW: Function to generate DOB data with flexible range
-  const generateDOBData = (format, range = '') => {
-    let fromDate, toDate;
-    
-    if (range && range !== 'dd-mm-yyyy, dd-mm-yyyy') {
-      const parts = range.split(',');
-      const [startStr, endStr] = parts.map(part => part.trim());
-      
-      const parseDate = (dateStr) => {
-        const [day, month, year] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      };
-      
-      // Set fromDate based on start range
-      if (startStr !== 'dd-mm-yyyy') {
-        fromDate = parseDate(startStr);
-      } else {
-        // No start restriction - use default (80 years ago)
-        fromDate = new Date();
-        fromDate.setFullYear(fromDate.getFullYear() - 80);
-      }
-      
-      // Set toDate based on end range
-      if (endStr !== 'dd-mm-yyyy') {
-        toDate = parseDate(endStr);
-      } else {
-        // No end restriction - use default (18 years ago)
-        toDate = new Date();
-        toDate.setFullYear(toDate.getFullYear() - 18);
-      }
-    } else {
-      // Default range: 18 to 80 years ago
-      fromDate = new Date();
-      fromDate.setFullYear(fromDate.getFullYear() - 80);
-      toDate = new Date();
-      toDate.setFullYear(toDate.getFullYear() - 18);
-    }
-    
-    const randomDate = faker.date.between({ from: fromDate, to: toDate });
-    
+
+  // -------------- START of replacing code area for DOB Pikcer  -----------------------------------------------------------------------------
+
+
+  const generateDOBData = (format, from = null, to = null) => {
+    // Default: 80 years ago → 18 years ago
+    const defaultFrom = new Date();
+    defaultFrom.setFullYear(defaultFrom.getFullYear() - 80);
+
+    const defaultTo = new Date();
+    defaultTo.setFullYear(defaultTo.getFullYear() - 18);
+
+    // Use user dates if provided, otherwise fall back to defaults
+    const fromDate = from ? new Date(from) : defaultFrom;
+    const toDate = to ? new Date(to) : defaultTo;
+
+    // FINAL SAFETY: Always ensure from ≤ to
+    const start = fromDate <= toDate ? fromDate : toDate;
+    const end = fromDate <= toDate ? toDate : fromDate;
+
+    const randomDate = faker.date.between({ from: start, to: end });
+
     switch (format) {
       case 'dd-mm-yyyy':
-        return randomDate.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+        return randomDate.toLocaleDateString('en-GB');
       case 'mm-dd-yyyy':
-        return randomDate.toLocaleDateString('en-US'); // mm/dd/yyyy format
+        return randomDate.toLocaleDateString('en-US');
       case 'dd-mmm-yyyy':
-        return randomDate.toLocaleDateString('en-GB', { 
-          day: '2-digit', 
-          month: 'short', 
-          year: 'numeric' 
-        }).replace(/ /g, '-');
+        return randomDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
       case 'mmm-dd-yyyy':
-        return randomDate.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: '2-digit', 
-          year: 'numeric' 
-        }).replace(/ /g, '-');
+        return randomDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).replace(/ /g, '-');
       default:
         return randomDate.toISOString().split('T')[0];
     }
   };
+
+  // -------------- END of replacing code area for DOB Pikcer  -----------------------------------------------------------------------------
+
+
+
+
+
+
 
   // NEW: Function to generate intelligent salary data
   const generateSalaryData = () => {
@@ -292,7 +197,7 @@ function App() {
     const totalInches = heightCm / 2.54;
     const feet = Math.floor(totalInches / 12);
     const inches = Math.round(totalInches % 12);
-    
+
     return `${feet}'${inches}" (${heightCm}cm)`;
   };
 
@@ -306,7 +211,7 @@ function App() {
   // NEW: Function to generate size data based on condition and age
   const generateSizeData = (condition, age = null) => {
     if (!condition) return faker.helpers.arrayElement(['XS', 'S', 'M', 'L', 'XL']);
-    
+
     const sizes = sizeConditions[condition];
     if (!sizes) return faker.helpers.arrayElement(['XS', 'S', 'M', 'L', 'XL']);
 
@@ -326,7 +231,7 @@ function App() {
         // Adults get normal distribution
         return faker.helpers.arrayElement(sizes);
       }
-      
+
       if (condition === 'Shoe Size(Adult)') {
         // Adult shoe sizes based on age
         if (age < 18) {
@@ -339,7 +244,7 @@ function App() {
           return faker.helpers.arrayElement(olderAdultSizes);
         }
       }
-      
+
       if (condition === 'Shoe Size(Kids)') {
         // Kids shoe sizes strongly correlated with age
         if (age < 5) {
@@ -844,40 +749,52 @@ function App() {
     if (!capitalCity) return null;
     return await fetchCityCoordinates(capitalCity, countryName);
   };
+  //-----------------------------add custom column changes start here ---- 21 Nov ---------------
+
 
   const addCustomColumn = () => {
     const name = columnName.trim();
     const maxLen = document.getElementById('col-maxlen').value
       ? parseInt(document.getElementById('col-maxlen').value)
       : null;
+
     if (customColumns.some(c => c.name === name)) return alert('Column name exists');
-    
-    // NEW: Store size condition or DOB format with the column
+
     const columnData = { name, type: selectedType, maxLen };
+
     if (selectedType === 'Size' && selectedSizeCondition) {
       columnData.sizeCondition = selectedSizeCondition;
     }
     if (selectedType === 'DOB' && selectedDOBFormat) {
       columnData.dobFormat = selectedDOBFormat;
-      columnData.dobRange = dobRange;
+      columnData.dobFrom = dobFromDate;
+      columnData.dobTo = dobToDate;
     }
-    
+
     setCustomColumns([...customColumns, columnData]);
     document.getElementById('col-maxlen').value = '';
-    // NEW: Reset conditions after adding column
-    setSelectedSizeCondition('');
+
+    // Reset DOB fields after adding
     setSelectedDOBFormat('');
-    setDobRange('dd-mm-yyyy, dd-mm-yyyy');
-    setDobRangeError('');
+    setDobFromDate(null);
+    setDobToDate(null);
+    setDobDateError('');
+    setSelectedSizeCondition('');
   };
 
-  const removeCustomColumn = (i) =>
-    setCustomColumns(customColumns.filter((_, idx) => idx !== i));
 
-  const removeLastCustom = () =>
-    setCustomColumns(customColumns.slice(0, -1));
 
+
+  //-------------------------------- change till  here 1st ---------------------
+  const removeCustomColumn = (i) => setCustomColumns(customColumns.filter((_, idx) => idx !== i));
+  const removeLastCustom = () => setCustomColumns(customColumns.slice(0, -1));
   const clearAllColumns = () => setCustomColumns([]);
+
+
+  //--------------------------------------------generate data changes start here
+
+
+
 
   const generateData = async () => {
     setIsLoading(true);
@@ -901,6 +818,12 @@ function App() {
       let selectedState = null;
       let cityCoordinates = null;
       let countryCoordinates = null;
+
+      //---dob changes----
+      //--if (col.type === 'DOB') {
+      //--    val = generateDOBData(col.dobFormat, col.dobFrom, col.dobTo);
+      //--  }
+      //---dob changes end------
 
       // NEW: Generate age first if needed for size matching
       if (hasAgeColumn) {
@@ -939,7 +862,7 @@ function App() {
         } else {
           switch (col.type) {
             case 'String': val = faker.lorem.words(3); break;
-            case 'Numeric': 
+            case 'Numeric':
               // NEW: If this is an age column, use the pre-generated age value
               if (hasAgeColumn && (col.name.toLowerCase().includes('age') || col.name.toLowerCase().includes('year'))) {
                 val = ageValue;
@@ -1008,7 +931,7 @@ function App() {
               break;
             case 'DOB':
               // NEW: Generate DOB data based on format and range
-              val = generateDOBData(col.dobFormat, col.dobRange);
+              val = generateDOBData(col.dobFormat, col.dobFrom, col.dobTo);
               break;
             case 'Salary':
               // NEW: Generate intelligent salary data
@@ -1028,6 +951,11 @@ function App() {
         if (col.maxLen && typeof val === 'string')
           val = val.slice(0, col.maxLen);
         row[col.name] = val;
+
+        // ... rest of your switch/cases
+
+        if (col.maxLen && typeof val === 'string') val = val.slice(0, col.maxLen);
+        row[col.name] = val;
       }
       newData.push(row);
     }
@@ -1035,6 +963,15 @@ function App() {
     setIsLoading(false);
   };
 
+
+
+
+
+  //--------------- within this section some changes -----------------
+
+
+
+  // --no change from herer -------------------------------------------
   const downloadCSV = () => {
     if (data.length === 0) return;
     const csv =
@@ -1079,6 +1016,17 @@ function App() {
   const handleResetConfirm = () => window.location.reload();
   const handleResetCancel = () => setShowResetConfirm(false);
 
+
+
+  //-----------no change till here --------------
+
+
+
+
+
+
+
+
   return (
     <div className={`App ${theme}-theme`}>
       {showResetConfirm && (
@@ -1098,180 +1046,148 @@ function App() {
           {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
         </button>
       </div>
+
+
       <h1>Fake Data Generator</h1>
-      {/* UPDATED: Fixed custom-section with proper alignment and visible buttons */}
-      <div className="custom-section" style={{ 
-        display: 'flex', 
-        flexWrap: 'nowrap', 
-        gap: '1rem', 
+
+
+      {/* FIRST CARD – now expands horizontally automatically */}
+
+
+      <div className="custom-section" style={{
+        display: 'flex',
+        flexWrap: 'wrap',              // keep wrap so it still works on very small screens
+        gap: '1rem',
         alignItems: 'flex-end',
         padding: '1.5rem',
         backgroundColor: theme === 'light' ? '#f5f5f5' : '#2d2d2d',
         borderRadius: '8px',
         marginBottom: '1.5rem',
-        minHeight: 'auto',
         width: '100%',
+        minWidth: 'fit-content',      // ← NEW: prevents shrinking too much
         boxSizing: 'border-box',
-        overflow: 'visible'
+        overflow: 'visible',
+        justifyContent: 'flex-start'  // ← NEW: keeps everything left-aligned in one row
       }}>
-        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px', flexShrink: 0 }}>
+
+        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px' }}>
           Column Name:
-          <input 
-            id="col-name" 
-            type="text" 
-            value={columnName} 
-            onChange={(e) => setColumnName(e.target.value)} 
-            placeholder="Enter column name" 
+          <input
+            type="text"
+            value={columnName}
+            onChange={(e) => setColumnName(e.target.value)}
+            placeholder="Enter column name"
             style={{ marginTop: '0.25rem', padding: '0.5rem' }}
           />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px', flexShrink: 0 }}>
+        {/*/----------monior updates above, between comments -------*/}
+
+
+        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px' }}>
           Type:
-          <select 
-            id="col-type" 
-            value={selectedType} 
+          <select
+            value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
             style={{ marginTop: '0.25rem', padding: '0.5rem' }}
           >
             {Object.entries(fieldCategories).map(([cat, fields]) => (
               <optgroup key={cat} label={cat}>
-                {fields.map(f => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
+                {fields.map(f => <option key={f} value={f}>{f}</option>)}
               </optgroup>
             ))}
           </select>
         </label>
-        
-        {/* NEW: Size Condition Dropdown */}
+
+        {/* Size Condition */}
         {selectedType === 'Size' && (
-          <label style={{ display: 'flex', flexDirection: 'column', minWidth: '180px', flexShrink: 0 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', minWidth: '180px' }}>
             Condition/Choice:
-            <select 
-              value={selectedSizeCondition} 
+            <select
+              value={selectedSizeCondition}
               onChange={(e) => setSelectedSizeCondition(e.target.value)}
               style={{ marginTop: '0.25rem', padding: '0.5rem' }}
             >
               <option value="">Select Size Type</option>
-              {Object.keys(sizeConditions).map(condition => (
-                <option key={condition} value={condition}>{condition}</option>
+              {Object.keys(sizeConditions).map(c => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </label>
         )}
-        
-        {/* NEW: DOB Format Dropdown and Range Input */}
+
+        {/* NEW: DOB datepicker */}
         {selectedType === 'DOB' && (
           <>
-            <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px', flexShrink: 0 }}>
-              Condition/Choice:
-              <select 
-                value={selectedDOBFormat} 
+            <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px' }}>
+              Format:
+              <select
+                value={selectedDOBFormat}
                 onChange={(e) => setSelectedDOBFormat(e.target.value)}
                 style={{ marginTop: '0.25rem', padding: '0.5rem' }}
               >
                 <option value="">Select Date Format</option>
-                {dobFormats.map(format => (
-                  <option key={format} value={format}>{format}</option>
-                ))}
+                {dobFormats.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </label>
+
+
+            {/*// ----------starting here, changes below till next comment - Nov 21 */}
+
+
             {selectedDOBFormat && (
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                minWidth: '280px', 
-                flexShrink: 0
-              }}>
-                <label style={{ display: 'flex', flexDirection: 'column' }}>
-                  Range:
-                  <input 
-                    type="text" 
-                    value={dobRange} 
-                    onChange={handleDobRangeChange}
-                    placeholder="dd-mm-yyyy, dd-mm-yyyy"
-                    title="Enter start date, end date, or both. Leave as 'dd-mm-yyyy' for no restriction."
-                    style={{ 
-                      marginTop: '0.25rem', 
-                      padding: '0.5rem', 
-                      fontFamily: 'monospace',
-                      letterSpacing: '0.5px'
-                    }}
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label>From Date:</label>
+                  <DatePicker
+                    selected={dobFromDate}
+                    onChange={setDobFromDate}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="dd-mm-yyyy"
+                    isClearable
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={80}
                   />
-                </label>
-                {dobRangeError && (
-                  <div className="error-text" style={{ 
-                    color: 'red', 
-                    fontSize: '12px', 
-                    marginTop: '4px'
-                  }}>
-                    {dobRangeError}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label>To Date:</label>
+                  <DatePicker
+                    selected={dobToDate}
+                    onChange={setDobToDate}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="dd-mm-yyyy"
+                    isClearable
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={80}
+                  />
+                </div>
+
+                {dobDateError && (
+                  <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                    {dobDateError}
                   </div>
                 )}
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#666', 
-                  marginTop: '4px'
-                }}>
-                  Format: dd-mm-yyyy, dd-mm-yyyy
-                </div>
               </div>
             )}
           </>
         )}
-        
-        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px', flexShrink: 0 }}>
+
+        <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px' }}>
           Max Length:
-          <input 
-            id="col-maxlen" 
-            type="number" 
-            min="1" 
-            placeholder="Optional" 
-            style={{ marginTop: '0.25rem', padding: '0.5rem' }}
-          />
+          <input id="col-maxlen" type="number" min="1" placeholder="Optional" style={{ marginTop: '0.25rem', padding: '0.5rem' }} />
         </label>
-        
-        {/* Buttons container - FIXED: Now properly visible */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          alignItems: 'center',
-          flexShrink: 0,
-          marginBottom: '0.25rem'
-        }}>
-          <button 
-            onClick={addCustomColumn}
-            style={{ 
-              padding: '0.6rem 1.2rem', 
-              backgroundColor: '#007bff', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold'
-            }}
-          >
-            +
-          </button>
-          <button 
-            onClick={removeLastCustom} 
-            disabled={customColumns.length === 0}
-            style={{ 
-              padding: '0.6rem 1.2rem', 
-              backgroundColor: customColumns.length === 0 ? '#6c757d' : '#dc3545', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              cursor: customColumns.length === 0 ? 'not-allowed' : 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold'
-            }}
-          >
-            -
-          </button>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={addCustomColumn} style={{ padding: '0.6rem 1.2rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}>+</button>
+          <button onClick={removeLastCustom} disabled={customColumns.length === 0} style={{ padding: '0.6rem 1.2rem', backgroundColor: customColumns.length === 0 ? '#6c757d' : '#dc3545', color: 'white', border: 'none', borderRadius: '4px' }}>-</button>
         </div>
       </div>
+
+
+
+      {/* //----------changes above----------------------------*/}
 
       {customColumns.length > 0 && (
         <div className="added-columns-section">
@@ -1281,17 +1197,25 @@ function App() {
           </div>
           <table className="columns-table">
             <thead>
-              <tr>
-                <th>Order</th>
-                <th>Column Name</th>
-                <th>Type</th>
-                <th>Max Length</th>
-                <th>Action</th>
+              <tr style={{
+                backgroundColor: theme === 'light' ? '#f8f9fa' : '#495057',
+                color: theme === 'light' ? '#212529' : '#e9ecef',
+                fontWeight: '600',
+                textAlign: 'left'
+              }}>
+                <th style={{ padding: '12px 8px', fontSize: '14px' }}>Order</th>
+                <th style={{ padding: '12px 8px', fontSize: '14px' }}>Column Name</th>
+                <th style={{ padding: '12px 8px', fontSize: '14px' }}>Type</th>
+                <th style={{ padding: '12px 8px', fontSize: '14px' }}>Max Length</th>
+                <th style={{ padding: '12px 8px', fontSize: '14px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {customColumns.map((col, i) => (
-                <tr key={i}>
+                <tr key={i} style={{
+                  backgroundColor: theme === 'light' ? '#ffffff' : '#343a40',
+                  borderBottom: `1px solid ${theme === 'light' ? '#dee2e6' : '#495057'}`
+                }}>
                   <td>
                     <div className="order-controls">
                       <button onClick={() => moveColumnUp(i)} disabled={i === 0} className="order-btn" title="Move up">↑</button>
@@ -1325,17 +1249,9 @@ function App() {
       )}
 
       <div className="button-group">
-        <label>
-          Rows:
-          <input type="number" value={rows} min="1" onChange={e => setRows(parseInt(e.target.value))} />
-        </label>
-        <label>
-          Columns:
-          <input type="number" value={columns} min="1" onChange={e => setColumns(parseInt(e.target.value))} />
-        </label>
-        <button onClick={generateData} disabled={isGenerateDisabled()}>
-          {isLoading ? 'Generating…' : 'Generate Data'}
-        </button>
+        <label>Rows:<input type="number" value={rows} min="1" onChange={e => setRows(parseInt(e.target.value))} /></label>
+        <label>Columns:<input type="number" value={columns} min="1" onChange={e => setColumns(parseInt(e.target.value))} /></label>
+        <button onClick={generateData} disabled={isGenerateDisabled()}>{isLoading ? 'Generating…' : 'Generate Data'}</button>
         <button onClick={downloadCSV} disabled={data.length === 0 || isLoading}>Download CSV</button>
         <button onClick={downloadJSON} disabled={data.length === 0 || isLoading}>Download JSON</button>
         <button onClick={handleResetClick}>Reset!</button>
@@ -1355,7 +1271,7 @@ function App() {
             {totalPages > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <select value={rowsPerPage} onChange={(e) => setRowsPerPage(parseInt(e.target.value))}>
-                  {[25,50,100,200,300,500,1000].map(n => <option key={n} value={n}>{n}</option>)}
+                  {[25, 50, 100, 200, 300, 500, 1000].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
                 <button onClick={handlePrevPage} disabled={currentPage === 1}>&lt;</button>
                 <select value={currentPage} onChange={(e) => handlePageChange(parseInt(e.target.value))}>
