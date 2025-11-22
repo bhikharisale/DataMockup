@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/DataMockup/static/css/main.05ca5656.css",
+    "main.js": "/DataMockup/static/js/main.df2ddad3.js",
+    "static/js/453.339d9a24.chunk.js": "/DataMockup/static/js/453.339d9a24.chunk.js",
+    "index.html": "/DataMockup/index.html",
+    "main.05ca5656.css.map": "/DataMockup/static/css/main.05ca5656.css.map",
+    "main.df2ddad3.js.map": "/DataMockup/static/js/main.df2ddad3.js.map",
+    "453.339d9a24.chunk.js.map": "/DataMockup/static/js/453.339d9a24.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.05ca5656.css",
+    "static/js/main.df2ddad3.js"
+  ]
+}
