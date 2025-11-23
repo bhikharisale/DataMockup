@@ -30,6 +30,9 @@ function App() {
   const [dobToDate, setDobToDate] = useState(null);
   const [dobDateError, setDobDateError] = useState('');
 
+  // NEW: Temperature mode state
+  const [selectedTempMode, setSelectedTempMode] = useState('');
+
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   // -------------- START of replacing code area for DO Pikcer - Nov 21 12:50PM -----------------------------------------------------------------------------
@@ -46,7 +49,19 @@ function App() {
       setDobToDate(null);
       setDobDateError('');
     }
+    // NEW: Reset temperature mode when type changes
+    if (selectedType !== 'Temperature (C)' && selectedType !== 'Temperature (F)') {
+      setSelectedTempMode('');
+    }
   }, [selectedType]);
+
+  // NEW: Check if this is the first temperature column
+  const isFirstTemperatureColumn = () => {
+    const tempColumns = customColumns.filter(col => 
+      col.type === 'Temperature (C)' || col.type === 'Temperature (F)'
+    );
+    return tempColumns.length === 0;
+  };
 
   // Validate DOB dates
   useEffect(() => {
@@ -175,11 +190,48 @@ function App() {
 
   // -------------- END of replacing code area for DOB Pikcer  -----------------------------------------------------------------------------
 
+  // NEW: Temperature conversion functions
+  const celsiusToFahrenheit = (celsius) => (celsius * 9/5) + 32;
+  const fahrenheitToCelsius = (fahrenheit) => (fahrenheit - 32) * 5/9;
 
+  // NEW: Function to extract numeric value from temperature string
+  const extractTemperatureValue = (tempString) => {
+    const match = tempString.match(/(-?\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  };
 
+  // NEW: Function to generate temperature data with conversion logic
+  const generateTemperatureData = (type, mode, rowData, columnConfig) => {
+    // Find the first temperature column in the row data
+    const firstTempColumn = columnConfig.find(col => 
+      (col.type === 'Temperature (C)' || col.type === 'Temperature (F)') && 
+      rowData[col.name] !== undefined
+    );
 
+    if (mode === 'Convert' && firstTempColumn && firstTempColumn.name !== columnName) {
+      const sourceTemp = rowData[firstTempColumn.name];
+      const sourceValue = extractTemperatureValue(sourceTemp);
+      
+      if (firstTempColumn.type === 'Temperature (C)' && type === 'Temperature (F)') {
+        // Convert C to F
+        const convertedValue = celsiusToFahrenheit(sourceValue);
+        return `${Math.round(convertedValue)}°F`;
+      } else if (firstTempColumn.type === 'Temperature (F)' && type === 'Temperature (C)') {
+        // Convert F to C
+        const convertedValue = fahrenheitToCelsius(sourceValue);
+        return `${Math.round(convertedValue)}°C`;
+      }
+    }
 
-
+    // Default random generation
+    if (type === 'Temperature (C)') {
+      return `${faker.number.int({ min: -20, max: 50 })}°C`;
+    } else if (type === 'Temperature (F)') {
+      return `${faker.number.int({ min: -4, max: 122 })}°F`;
+    }
+    
+    return '';
+  };
 
   // NEW: Function to generate intelligent salary data
   const generateSalaryData = () => {
@@ -770,16 +822,21 @@ function App() {
       columnData.dobFrom = dobFromDate;
       columnData.dobTo = dobToDate;
     }
+    // NEW: Add temperature mode if applicable
+    if ((selectedType === 'Temperature (C)' || selectedType === 'Temperature (F)') && selectedTempMode) {
+      columnData.tempMode = selectedTempMode;
+    }
 
     setCustomColumns([...customColumns, columnData]);
     document.getElementById('col-maxlen').value = '';
 
-    // Reset DOB fields after adding
+    // Reset all fields after adding
     setSelectedDOBFormat('');
     setDobFromDate(null);
     setDobToDate(null);
     setDobDateError('');
     setSelectedSizeCondition('');
+    setSelectedTempMode('');
   };
 
 
@@ -875,8 +932,11 @@ function App() {
             case 'ID': val = faker.string.uuid(); break;
             case 'Lorem Text': val = faker.lorem.sentence(); break;
             case 'Company': val = faker.company.name(); break;
-            case 'Temperature (C)': val = `${faker.number.int({ min: -20, max: 50 })}°C`; break;
-            case 'Temperature (F)': val = `${faker.number.int({ min: -4, max: 122 })}°F`; break;
+            case 'Temperature (C)': 
+            case 'Temperature (F)': 
+              // NEW: Use temperature generation with conversion logic
+              val = generateTemperatureData(col.type, col.tempMode, row, columnConfig);
+              break;
             case 'Shoe Size': val = faker.number.int({ min: 5, max: 15 }); break;
             case 'Gender': val = faker.helpers.arrayElement(['Male', 'Female', 'Other']); break;
             case 'Credit Card Number': val = faker.string.numeric(16).replace(/(\d{4})(?=\d)/g, '$1-'); break;
@@ -1098,6 +1158,28 @@ function App() {
           </select>
         </label>
 
+        {/* NEW: Temperature Mode Dropdown */}
+        {(selectedType === 'Temperature (C)' || selectedType === 'Temperature (F)') && (
+          <label style={{ display: 'flex', flexDirection: 'column', minWidth: '150px' }}>
+            Mode:
+            <select
+              value={selectedTempMode}
+              onChange={(e) => setSelectedTempMode(e.target.value)}
+              style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+            >
+              <option value="">Select Mode</option>
+              {isFirstTemperatureColumn() ? (
+                <option value="Random">Random</option>
+              ) : (
+                <>
+                  <option value="Random">Random</option>
+                  <option value="Convert">Convert</option>
+                </>
+              )}
+            </select>
+          </label>
+        )}
+
         {/* Size Condition */}
         {selectedType === 'Size' && (
           <label style={{ display: 'flex', flexDirection: 'column', minWidth: '180px' }}>
@@ -1232,6 +1314,10 @@ function App() {
                     {/* NEW: Show DOB format if applicable */}
                     {col.type === 'DOB' && col.dobFormat && (
                       <div className="size-condition-hint">({col.dobFormat})</div>
+                    )}
+                    {/* NEW: Show temperature mode if applicable */}
+                    {(col.type === 'Temperature (C)' || col.type === 'Temperature (F)') && col.tempMode && (
+                      <div className="size-condition-hint">({col.tempMode})</div>
                     )}
                     {getPopulationHint(col.type) && (
                       <div className="population-hint">{getPopulationHint(col.type)}</div>
