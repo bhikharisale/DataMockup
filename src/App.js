@@ -33,6 +33,9 @@ function App() {
   // NEW: Temperature mode state
   const [selectedTempMode, setSelectedTempMode] = useState('');
 
+  // NEW: Track if data has been generated at least once
+  const [hasGeneratedData, setHasGeneratedData] = useState(false);
+
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   // -------------- START of replacing code area for DO Pikcer - Nov 21 12:50PM -----------------------------------------------------------------------------
@@ -1021,6 +1024,8 @@ function App() {
     }
     setData(newData);
     setIsLoading(false);
+    // NEW: Mark that data has been generated at least once
+    setHasGeneratedData(true);
   };
 
 
@@ -1350,11 +1355,13 @@ function App() {
         </div>
       )}
 
-      {data.length > 0 && (
+      {/* NEW: Show pagination controls if data exists OR data has been generated at least once */}
+      {(data.length > 0 || hasGeneratedData) && (
         <div className="table-container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2>Sample Random Data</h2>
-            {totalPages > 1 && (
+            {/* NEW: Always show pagination controls if data has been generated at least once */}
+            {(totalPages > 1 || hasGeneratedData) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <select value={rowsPerPage} onChange={(e) => setRowsPerPage(parseInt(e.target.value))}>
                   {[25, 50, 100, 200, 300, 500, 1000].map(n => <option key={n} value={n}>{n}</option>)}
